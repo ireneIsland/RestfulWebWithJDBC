@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<script
+	src="https://ajax.googleapis.com/ajax/libs/jquery/3.4.1/jquery.min.js"></script>
+<script type="text/javascript">
+
+	var url = "http://localhost:8081/scoreSheet/movies";
+
+	$(document).ready(function() {
+		getAllScoreSheet();
+	})
+	
+	function getAllScoreSheet(){
+		$.ajax({
+			url : url,
+			type : "GET",
+			dataType : "json",
+			success : function(data) {
+				console.log(data);
+				$("#sheetbody").empty();
+				$.each(data, function(index, item) {
+					console.log(item);
+					itemToTableRow(item);
+				})
+			}
+		});
+	}
+
+	function itemToTableRow(item) {
+		$("#sheetbody").append(
+				$("<tr>" + "<td>" + item.id + "</td>" + "<td>" + item.name
+						+ "</td>" + "<td>" + item.info + "</td>" + "<td>"
+						+ item.score + "</td>"
+						+ "<td><button onclick = \"deleteMovie(\'" + (item.id+10)
+						+ "\')\">刪除</button><br>"
+						+ "<button onclick = \"openEditTable(\'" + item.id
+						+ "\')\">編輯</button></td>" + "</tr>"));
+	}
+
+	function deleteMovie(id) {
+		var conf = confirm("確定要刪除嗎?");
+		if(conf){
+			$.ajax({
+				url : url,
+				type : "DELETE",
+				data : {
+					id : null
+				},
+				success : function() {
+					console.log(id);
+					console.log("delete success");
+					location.reload();
+				},
+				error : function() {
+					console.log(id);
+					console.log("delete fail");
+				}
+			});
+		}
+	}
+
+	function editMovie(){
+		event.preventDefault();
+		console.log("editting");
+		$.ajax({
+			url : url,
+			type : "PUT",
+			dataType : "text",
+			data : {
+				id : $("#editId").val(),
+				name : $("#editName").val(),
+				info : $("#editInfo").val(),
+				score : $("#editScore").val()	
+			},
+			success : function(txt){
+				console.log(txt);
+				if(txt == "success"){
+					alert("編輯成功");
+					location.reload();
+				}else{
+					alert("編輯失敗");
+				}
+			},
+			error : function(txt, state, xhr){
+				alert("編輯失敗");
+				console.log(txt);
+				console.log(xhr);
+			}
+		});
+	}
+
+	function createMovie() {
+		event.preventDefault();
+		console.log("creating");
+		$.ajax({
+			url : url,
+			type : "POST",
+			data : {
+				id : $("#createId").val(),
+				name : $("#createName").val(),
+				info : $("#createInfo").val(),
+				score : $("#createScore").val()
+			},
+			success : function(responseText,status){
+				if(responseText == "success"){
+					alert("新增成功");
+					console.log(responseText);
+					location.reload();
+				}
+				else{
+					alert("新增失敗");
+					console.log(responseText);
+				}
+				
+			},
+			error : function(a,b,xhr){
+				alert("新增失敗");
+				console.log(xhr);
+			}
+		})
+	}
+	
+	function searchMovies(){
+		event.preventDefault();
+		$.ajax({
+			url : url + "/search",
+			type : "GET",
+			dataType : "json",
+			data : {
+				conditionType : $("#searchCondition").val(),
+				value : $("#searchValue").val()
+			},
+			success : function(data){
+				if(data[0] != null){
+					console.log(data);
+					var resultBody = $("#sheetbody");
+					resultBody.empty();
+					$.each(data, function(index, item){
+						itemToTableRow(item);
+					});
+				}
+				else{
+					alert("查詢無結果");
+				}
+			},
+			error : function(txt ,status, xhr){
+				console.log(xhr);
+			}
+		});
+	}
+	
+	function openEditTable(id) {
+		$.ajax({
+			url : url + "/" + id,
+			type : "GET",
+			dataType : "json",
+			success : function(data) {
+				console.log("get value success");
+				console.log(data);
+				editTableFadeToggle();
+				$("#editId").val(data.id);
+				$("#editName").val(data.name);
+				$("#editInfo").val(data.info);
+				$("#editScore").val(data.score);
+			},
+			error : function() {
+				console.log("get value fail");
+			}
+		});
+	}
+
+	function searchTableFadeToggle() {
+		$("#searchTable").fadeToggle();
+		$("#createTable").fadeOut();
+		$("#editTable").fadeOut();
+	}
+	
+	function createTableFadeToggle(){
+		$("#createTable").fadeToggle();
+		$("#searchTable").fadeOut();
+		$("#editTable").fadeOut();
+	}
+	
+	function editTableFadeToggle(){
+		$("#editTable").fadeIn();
+		$("#createTable").fadeOut();
+		$("#searchTable").fadeOut();
+	}
+	
+</script>
+<title>MovieScore Sheet</title>
+</head>
+<body>
+	<p id="output"></p>
+	<button onclick="createTableFadeToggle()">新增</button>
+	<button onclick="searchTableFadeToggle()">搜尋</button>
+	<button onclick="getAllScoreSheet()">顯示全部</button>
+	<form id="createTable" onsubmit="createMovie()" hidden="true">
+		編號 : <input type="text" id="createId"><br>
+		名稱 : <input type="text" id="createName"><br>
+		說明 : <input type="text" id="createInfo"><br>
+		分數 : <input type="text" id="createScore"><br>
+		<input type="submit" value="送出" onclick="createTableFadeToggle()">
+	</form>
+	<form id="editTable" onsubmit="editMovie()" hidden="true">
+		編號 : <input type="text" id="editId"><br>
+		名稱 : <input type="text" id="editName"><br>
+		說明 : <input type="text" id="editInfo"><br>
+		分數 : <input type="text" id="editScore"><br>
+		<input type="submit" value="送出" onclick="editTableFadeToggle()">
+	</form>
+	<div id="searchTable" hidden="true">
+		<select id = "searchCondition">
+			<option value="id">編號</option>
+			<option value="name">名稱</option>
+		</select>
+		<form onsubmit="searchMovies()">
+			<input type="text" id="searchValue">
+			<input type="submit" value="搜尋" onclick="searchTableFadeToggle()">
+		</form>
+	</div>
+	<table id="sheet" border="1">
+		<thead>
+			<tr>
+				<td>編號</td>
+				<td>名稱</td>
+				<td>說明</td>
+				<td>分數</td>
+			</tr>
+		</thead>
+		<tbody id="sheetbody">
+		</tbody>
+	</table>
+</body>
+</html>
